@@ -104,7 +104,7 @@ def handle_shutdown_command(message):
     global password_required, password_requested_by, password_attempts, shutdown_in_progress, next_attempt_time
 
     if shutdown_in_progress and datetime.datetime.now() < next_attempt_time:
-        remaining_time = next_attempt_time - datetime.datetime.now()
+        remaining_time = next_attempt_time - datetime.now()
         bot.send_message(message.chat.id,
                          f'Лимит попыток исчерпан. Попробуйте позже. Осталось времени: {remaining_time.seconds // 60} минут')
         return
@@ -1520,7 +1520,7 @@ def handle_message(message):
 
     if message.text.lower() in permanent_rules:
         for rule in permanent_rules[message.text.lower()]:
-            bot.reply_to(message, rule)
+            bot.reply_to(message, rule.format('@' + message.from_user.username))
 
     if chat_id in rules:
         for rule in rules[chat_id]:
@@ -1541,7 +1541,7 @@ def send_current_time(message):
 
 
 def get_current_time(city):
-    return datetime.datetime.now().strftime('%H:%M:%S')
+    return datetime.now().strftime('%H:%M:%S')
 
 
 try:
