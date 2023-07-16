@@ -4,6 +4,7 @@ from telebot import types
 from fractions import Fraction
 from bs4 import BeautifulSoup
 from flask import Flask, request
+from datetime import datetime, timedelta
 import random
 import requests
 import urllib.parse
@@ -391,31 +392,32 @@ def handle_ignorelist_command(message):
 
 @bot.message_handler(commands=['settime'])
 def start(message):
-    if str(message.from_user.id) == target_lox:
-        global start_time
-        time_str = message.text.split()[1]  # Получаем строку времени из команды /start
-
-        try:
-            hours, minutes, seconds = map(int, time_str.split(':'))
-            start_time = time.time() - (hours * 3600 + minutes * 60 + seconds)
-            bot.reply_to(message, 'Начальное время установлено.')
-        except ValueError:
-            bot.reply_to(message, 'Неверный нахуй. ты лох используй ЧЧ:ММ:СС.')
-    else:
-        bot.send_message(message.chat.id, "Молодой человек идите нахуй у вас нет прав!")
+    bot.send_message(message.chat.id, 'теперь всё автоматом просчитывается никаих /settime тебе')
+    # if str(message.from_user.id) == target_lox:
+    #     global start_time
+    #     time_str = message.text.split()[1]  # Получаем строку времени из команды /start
+    #
+    #     try:
+    #         hours, minutes, seconds = map(int, time_str.split(':'))
+    #         start_time = time.time() - (hours * 3600 + minutes * 60 + seconds)
+    #         bot.reply_to(message, 'Начальное время установлено.')
+    #     except ValueError:
+    #         bot.reply_to(message, 'Неверный нахуй. ты лох используй ЧЧ:ММ:СС.')
+    # else:
+    #     bot.send_message(message.chat.id, "Молодой человек идите нахуй у вас нет прав!")
 
 
 @bot.message_handler(commands=['time'])
 def show_time(message):
-    global start_time
-    if start_time is not None:
-        elapsed_time = time.time() - start_time
-        hours = int(elapsed_time // 3600)
-        minutes = int((elapsed_time % 3600) // 60)
-        seconds = int(elapsed_time % 60)
-        bot.reply_to(message, f'Время в новосибе? {hours}:{minutes} и {seconds} секунд.')
-    else:
-        bot.reply_to(message, 'Установлено нахуй')
+    # get UTC time and add 7 hours
+    nsk_time = datetime.utcnow() + datetime.timedelta(hours=7)
+
+    # get hours, minutes and seconds from NSK time
+    hours = nsk_time.hour
+    minutes = nsk_time.minute
+    seconds = nsk_time.second
+
+    bot.reply_to(message, f'Время в новосибе? {hours + 1}:{minutes + 1} и {seconds + 1} секунд.')  # + 1, because 0-start
 
 
 target_lox = "1130692453"
