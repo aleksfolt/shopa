@@ -1220,8 +1220,8 @@ def handle_message(message):
         bot.delete_message(photo.chat.id, photo.message_id)
 
     if message.text.lower() in permanent_rules:
-        for rule in permanent_rules[message.text.lower()]:
-            bot.reply_to(message, rule.format('@' + message.from_user.username))
+        rule = permanent_rules[message.text.lower()]
+        bot.reply_to(message, rule.format('@' + message.from_user.username))
 
     if chat_id in rules:
         for rule in rules[chat_id]:
