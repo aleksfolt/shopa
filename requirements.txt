@@ -1,0 +1,8 @@
+telebot
+bs4
+requests
+geopy
+pyowm
+wikipedia
+googleapiclient
+flask
