@@ -4,7 +4,8 @@ from telebot import types
 from fractions import Fraction
 from bs4 import BeautifulSoup
 from flask import Flask, request
-from datetime import datetime, timedelta
+from datetime import datetime
+import json
 import random
 import requests
 import urllib.parse
@@ -31,6 +32,8 @@ YOUTUBE_API_KEY = 'спизжено'
 bot = telebot.TeleBot(TOKEN)
 app = Flask(__name__)
 answers = {}
+with open('permanent_rules.json', 'r') as f:
+    permanent_rules = json.load(f)
 rules = {}
 PASSWORD = 'shutdownbot'
 tracked_messages = {}
@@ -499,46 +502,6 @@ def handlecommandsatrt(message):
                      f"Молодой {username} я понимаю что вам хочется выебать свою мать но это может быть неприемлемым и я не согласен с вашим мнением на вашем месте я бы переформулировал свою точку зрения и не хотел бы выёбывать свою мать так что подумайте над моими словами и переформулируйте свою точку зрения если это возможно спасибо {username}")
 
 
-@bot.message_handler(
-    func=lambda message: message.text.lower() == "@pelmenvkusniy @aholaheew @alekami649 в чате активим")
-def handle_activim2(message):
-    for _ in range(2):
-        bot.send_message(message.chat.id, "@pelmenvkusniy @aholaheew @alekami649 в чате активим")
-
-
-@bot.message_handler(
-    func=lambda message: message.text.lower() == "пинг лады")
-def handle_lada(message):
-    for _ in range(5):
-        bot.send_message(message.chat.id, "@Krytai11 просыпайся")
-
-
-@bot.message_handler(
-    func=lambda message: message.text.lower() == "пинг всех")
-def handle_pingvsex(message):
-    for _ in range(6):
-        bot.send_message(message.chat.id, "@alekami649 @aholaheew @maxim2312 @AleksFolt @Krytai11 просыпаемся ебланы")
-
-
-@bot.message_handler(
-    func=lambda message: message.text.lower() == "пинг лёши")
-def handle_losha(message):
-    for _ in range(9):
-        bot.send_message(message.chat.id, "@alekami649 заебал спамить")
-
-
-@bot.message_handler(
-    func=lambda message: message.text.lower() == "ладно жиза бот кто твой создатель?")
-def handle_activim1(message):
-    bot.send_message(message.chat.id, "Мой создатель @AleksFolt")
-
-
-@bot.message_handler(
-    func=lambda message: message.text.lower() == "матвей")
-def handle_activim1(message):
-    bot.send_message(message.chat.id, "Матвеем по лбу не дало?")
-
-
 # Заготовки для ников и соответствующих им ID
 users = {
     'user1': 123456789,
@@ -580,16 +543,6 @@ def handle_send_group_command(message):
 
     bot.send_message(group_id, text)
     bot.send_message(message.chat.id, "Сообщение впиздошено в пизду ой в группу")
-
-
-@bot.message_handler(func=lambda message: message.text.lower() == "дефолт")
-def handle_activim1dsd(message):
-    bot.send_message(message.chat.id, "http://mat.ebal.tilda.ws/")
-
-
-@bot.message_handler(func=lambda message: message.text.lower() == "грамотный")
-def handle_activim1dsd(message):
-    bot.send_message(message.chat.id, "да, тебя ебёт?")
 
 
 @bot.message_handler(commands=["list"])
@@ -642,49 +595,6 @@ def handle_button_click(call):
         bot.answer_callback_query(call.id, 'Вы выбрали Wikipedia')
 
 
-@bot.message_handler(
-    func=lambda message: message.text.lower() == "@aholaheew @pelmenvkusniy @alekami649 в чате активим")
-def handle_activim3(message):
-    for _ in range(2):
-        bot.send_message(message.chat.id, "@pelmenvkusniy @aholaheew @alekami649 в чате активим")
-
-
-@bot.message_handler(
-    func=lambda message: message.text.lower() == "@alekami649 @aholaheew @pelmenvkusniy в чате активим")
-def handle_activim6654(message):
-    for _ in range(2):
-        bot.send_message(message.chat.id, "@pelmenvkusniy @aholaheew @alekami649 в чате активим")
-
-
-@bot.message_handler(
-    func=lambda message: message.text.lower() == "@alekami649 @pelmenvkusniy @aholaheew в чате активим")
-def handle_activim4(message):
-    for _ in range(2):
-        bot.send_message(message.chat.id, "@pelmenvkusniy @aholaheew @alekami649 в чате активим")
-
-
-@bot.message_handler(func=lambda message: message.text.lower() == "@alekami649")
-def handle_alekami(message):
-    for _ in range(5):
-        bot.send_message(message.chat.id, "@alekami649")
-
-
-@bot.message_handler(func=lambda message: message.text.lower() == "иди нахуй")
-def handle_alekami649(message):
-    bot.send_message(message.chat.id, "сам иди пидр безмамный")
-
-
-@bot.message_handler(func=lambda message: message.text.lower() == "ladno")
-def handle_ladnoenglish(message):
-    bot.send_message(message.chat.id, "ladno")
-
-
-@bot.message_handler(func=lambda message: message.text.lower() == "мать ебал")
-def handle_matebal(message):
-    username = message.from_user.first_name
-    bot.reply_to(message, f"{username} заебал со своим Мать ебал")
-
-
 sticker_ids = ['CAACAgIAAxkBAAEJdodklqms9fZWB4iEiWCBEfB7kAnDWgACTzcAAhOsmUh7hDyJcDuaHS8E',
                'CAACAgIAAxkBAAEJdo1klqx8h1L445FMWv9dVmgjDoY0jQAC4AADi_lSO_-_V_BtJoNuLwQ',
                'CAACAgIAAxkBAAEJdo9klqyftx3QpNX_dmp2hOQCJy7mKQAC6SoAAiQjEEgkU062E7Upky8E',
@@ -695,71 +605,6 @@ sticker_ids = ['CAACAgIAAxkBAAEJdodklqms9fZWB4iEiWCBEfB7kAnDWgACTzcAAhOsmUh7hDyJ
 def send_random_sticker(message):
     random_sticker_id = random.choice(sticker_ids)
     bot.send_sticker(message.chat.id, random_sticker_id)
-
-
-@bot.message_handler(func=lambda message: message.text.lower() == "пон")
-def handle_pon(message):
-    bot.reply_to(message, "НИХУЯ НЕ ПОНЯТНО БЛЯЯЯЯЯЯТЬ 🤨🤨🤨🤨")
-
-
-@bot.message_handler(func=lambda message: message.text.lower() == "понятно")
-def handle_ponyatno(message):
-    bot.reply_to(message, "НИХУЯ НЕ ПОНЯТНО БЛЯЯЯЯЯЯТЬ 🤨🤨🤨🤨")
-
-
-@bot.message_handler(func=lambda message: message.text.lower() == "допустим")
-def handle_dopustim(message):
-    bot.reply_to(message, "это матвей придумал")
-
-
-@bot.message_handler(func=lambda message: message.text.lower() == "ладно")
-def handle_ladno(message):
-    bot.send_message(message.chat.id, "ладно")
-
-
-@bot.message_handler(func=lambda message: message.text.lower() == "бывает")
-def handle_bivaet(message):
-    bot.send_message(message.chat.id, "у тебя в жопе хуй бывает")
-
-
-@bot.message_handler(func=lambda message: message.text.lower() == "гений")
-def handle_geni(message):
-    bot.send_message(message.chat.id, "да 😎😎😎")
-
-
-@bot.message_handler(func=lambda message: message.text.lower() == "нахуя?")
-def handle_naxuya(message):
-    bot.send_message(message.chat.id, "чтобы жизнь мёдом не казалась")
-
-
-@bot.message_handler(func=lambda message: message.text.lower() == "нахуя")
-def handle_naxyya(message):
-    bot.send_message(message.chat.id, "чтобы жизнь мёдом не казалась")
-
-
-@bot.message_handler(func=lambda message: message.text.lower() == "пинг кеши")
-def handle_keshaping(message):
-    bot.send_message(message.chat.id, "какой бизнес открыл @aholaheew? Малый")
-
-
-@bot.message_handler(func=lambda message: message.text.lower() == "полезно")
-def handle_polezno(message):
-    bot.reply_to(message, "нет нахуй не полезно")
-
-
-@bot.message_handler(func=lambda message: message.text.lower() == "ladno")
-def handle_ladnoenglish(message):
-    bot.send_message(message.chat.id, "ladno")
-
-
-@bot.message_handler(func=lambda message: message.text.lower() == "цитата")
-def handle_citata(message):
-    bot.reply_to(message, "безумна можна быть первым")
-
-
-@bot.message_handler(func=lambda message: message.text.lower() == "жиза")
-def handle_ziza_sogl(message):
-    bot.reply_to(message, "согл")
 
 
 @bot.message_handler(func=lambda message: message.text.lower() == "работаем?")
@@ -1673,12 +1518,15 @@ def clear_rules(message):
 def handle_message(message):
     chat_id = message.chat.id
 
+    if message.text.lower() in permanent_rules:
+        for rule in permanent_rules[message.text.lower()]:
+            bot.reply_to(message, rule)
+
     if chat_id in rules:
         for rule in rules[chat_id]:
-            if rule['word'] in message.text.lower() and message.text.lower().count(rule['word']) == 1:
+            if rule['word'] == message.text.lower():
                 for _ in range(rule['count']):
                     bot.reply_to(message, rule['response'])
-                break
 
 
 @bot.message_handler(func=lambda message: True)
@@ -1698,7 +1546,7 @@ def get_current_time(city):
 
 try:
     bot.remove_webhook()
-    bot.set_webhook(url='YOUR_WEBHOOK_URL/your-webhook-endpoint')
+    bot.set_webhook(url='YOUR_WEBHOOK_URL/process_update')
     app.run(host='0.0.0.0', port=8443, ssl_context=('CERT.pem', 'KEY.pem'))
 except Exception as e:
     print(f"Error in the webhook setup: {e}")
