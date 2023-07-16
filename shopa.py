@@ -4,6 +4,8 @@ from telebot import types
 from fractions import Fraction
 from bs4 import BeautifulSoup
 from flask import Flask, request
+from datetime import datetime, timedelta
+import json
 import random
 import requests
 import urllib.parse
@@ -30,6 +32,10 @@ YOUTUBE_API_KEY = 'спизжено'
 bot = telebot.TeleBot(TOKEN)
 app = Flask(__name__)
 answers = {}
+with open('permanent_rules.json', 'r') as f_pr:
+    permanent_rules = json.load(f_pr)
+with open('images.json', 'r') as f_i:
+    images = json.load(f_i)
 rules = {}
 PASSWORD = 'shutdownbot'
 tracked_messages = {}
@@ -38,7 +44,7 @@ geolocator = Nominatim(user_agent='your-user-agent')
 owm = OWM(API_TOKEN)
 
 
-@app.route('/your-webhook-endpoint', methods=['POST'])
+@app.route('/process_update', methods=['POST'])  # do not forget to update endpoint
 def webhook():
     update = telebot.types.Update.de_json(request.stream.read().decode("utf-8"))
     bot.process_new_updates([update])
@@ -82,7 +88,7 @@ def check_password(message):
         if password_attempts >= max_password_attempts:
             bot.send_message(message.chat.id, 'Лимит попыток исчерпан. Попробуйте позже.')
             shutdown_in_progress = True
-            next_attempt_time = datetime.datetime.now() + datetime.timedelta(
+            next_attempt_time = datetime.datetime.now() + timedelta(
                 minutes=5)
         elif remaining_attempts > 1:
             bot.send_message(message.chat.id,
@@ -100,7 +106,7 @@ def handle_shutdown_command(message):
     global password_required, password_requested_by, password_attempts, shutdown_in_progress, next_attempt_time
 
     if shutdown_in_progress and datetime.datetime.now() < next_attempt_time:
-        remaining_time = next_attempt_time - datetime.datetime.now()
+        remaining_time = next_attempt_time - datetime.now()
         bot.send_message(message.chat.id,
                          f'Лимит попыток исчерпан. Попробуйте позже. Осталось времени: {remaining_time.seconds // 60} минут')
         return
@@ -273,7 +279,7 @@ def handle_ban_losha(message):
     bot.send_message(message.chat.id, "санёчек забанен ✅")
 
 
-@bot.message_handler(func=lambda message: any(word in message.text.lower() for word in ['http', 'https', '.com', '.ru', '.org', '.me', 'www', '.net', '.edu', '.gov', '.mil', '.int', '.ru', '.uk', '.de', '.cn', '.jp', '.br', '.au', '.ca']))
+@bot.message_handler(func=lambda message: any(entity.type == 'url' for entity in message.entities or []))
 def check_links(message):
     bot.reply_to(message, "Ни понял эта мы чё тут рекламу через ссылки пихаем?")
 
@@ -391,31 +397,32 @@ def handle_ignorelist_command(message):
 
 @bot.message_handler(commands=['settime'])
 def start(message):
-    if str(message.from_user.id) == target_lox:
-        global start_time
-        time_str = message.text.split()[1]  # Получаем строку времени из команды /start
-
-        try:
-            hours, minutes, seconds = map(int, time_str.split(':'))
-            start_time = time.time() - (hours * 3600 + minutes * 60 + seconds)
-            bot.reply_to(message, 'Начальное время установлено.')
-        except ValueError:
-            bot.reply_to(message, 'Неверный нахуй. ты лох используй ЧЧ:ММ:СС.')
-    else:
-        bot.send_message(message.chat.id, "Молодой человек идите нахуй у вас нет прав!")
+    bot.send_message(message.chat.id, 'теперь всё автоматом просчитывается никаих /settime тебе')
+    # if str(message.from_user.id) == target_lox:
+    #     global start_time
+    #     time_str = message.text.split()[1]  # Получаем строку времени из команды /start
+    #
+    #     try:
+    #         hours, minutes, seconds = map(int, time_str.split(':'))
+    #         start_time = time.time() - (hours * 3600 + minutes * 60 + seconds)
+    #         bot.reply_to(message, 'Начальное время установлено.')
+    #     except ValueError:
+    #         bot.reply_to(message, 'Неверный нахуй. ты лох используй ЧЧ:ММ:СС.')
+    # else:
+    #     bot.send_message(message.chat.id, "Молодой человек идите нахуй у вас нет прав!")
 
 
 @bot.message_handler(commands=['time'])
 def show_time(message):
-    global start_time
-    if start_time is not None:
-        elapsed_time = time.time() - start_time
-        hours = int(elapsed_time // 3600)
-        minutes = int((elapsed_time % 3600) // 60)
-        seconds = int(elapsed_time % 60)
-        bot.reply_to(message, f'Время в новосибе? {hours}:{minutes} и {seconds} секунд.')
-    else:
-        bot.reply_to(message, 'Установлено нахуй')
+    # get UTC time and add 7 hours
+    nsk_time = datetime.utcnow() + timedelta(hours=7)
+
+    # get hours, minutes and seconds from NSK time
+    hours = nsk_time.hour
+    minutes = nsk_time.minute
+    seconds = nsk_time.second
+
+    bot.reply_to(message, f'Время в новосибе? {hours + 1}:{minutes + 1} и {seconds + 1} секунд.')  # + 1, because 0-start
 
 
 target_lox = "1130692453"
@@ -497,46 +504,6 @@ def handlecommandsatrt(message):
                      f"Молодой {username} я понимаю что вам хочется выебать свою мать но это может быть неприемлемым и я не согласен с вашим мнением на вашем месте я бы переформулировал свою точку зрения и не хотел бы выёбывать свою мать так что подумайте над моими словами и переформулируйте свою точку зрения если это возможно спасибо {username}")
 
 
-@bot.message_handler(
-    func=lambda message: message.text.lower() == "@pelmenvkusniy @aholaheew @alekami649 в чате активим")
-def handle_activim2(message):
-    for _ in range(2):
-        bot.send_message(message.chat.id, "@pelmenvkusniy @aholaheew @alekami649 в чате активим")
-
-
-@bot.message_handler(
-    func=lambda message: message.text.lower() == "пинг лады")
-def handle_lada(message):
-    for _ in range(5):
-        bot.send_message(message.chat.id, "@Krytai11 просыпайся")
-
-
-@bot.message_handler(
-    func=lambda message: message.text.lower() == "пинг всех")
-def handle_pingvsex(message):
-    for _ in range(6):
-        bot.send_message(message.chat.id, "@alekami649 @aholaheew @maxim2312 @AleksFolt @Krytai11 просыпаемся ебланы")
-
-
-@bot.message_handler(
-    func=lambda message: message.text.lower() == "пинг лёши")
-def handle_losha(message):
-    for _ in range(9):
-        bot.send_message(message.chat.id, "@alekami649 заебал спамить")
-
-
-@bot.message_handler(
-    func=lambda message: message.text.lower() == "ладно жиза бот кто твой создатель?")
-def handle_activim1(message):
-    bot.send_message(message.chat.id, "Мой создатель @AleksFolt")
-
-
-@bot.message_handler(
-    func=lambda message: message.text.lower() == "матвей")
-def handle_activim1(message):
-    bot.send_message(message.chat.id, "Матвеем по лбу не дало?")
-
-
 # Заготовки для ников и соответствующих им ID
 users = {
     'user1': 123456789,
@@ -578,16 +545,6 @@ def handle_send_group_command(message):
 
     bot.send_message(group_id, text)
     bot.send_message(message.chat.id, "Сообщение впиздошено в пизду ой в группу")
-
-
-@bot.message_handler(func=lambda message: message.text.lower() == "дефолт")
-def handle_activim1dsd(message):
-    bot.send_message(message.chat.id, "http://mat.ebal.tilda.ws/")
-
-
-@bot.message_handler(func=lambda message: message.text.lower() == "грамотный")
-def handle_activim1dsd(message):
-    bot.send_message(message.chat.id, "да, тебя ебёт?")
 
 
 @bot.message_handler(commands=["list"])
@@ -640,49 +597,6 @@ def handle_button_click(call):
         bot.answer_callback_query(call.id, 'Вы выбрали Wikipedia')
 
 
-@bot.message_handler(
-    func=lambda message: message.text.lower() == "@aholaheew @pelmenvkusniy @alekami649 в чате активим")
-def handle_activim3(message):
-    for _ in range(2):
-        bot.send_message(message.chat.id, "@pelmenvkusniy @aholaheew @alekami649 в чате активим")
-
-
-@bot.message_handler(
-    func=lambda message: message.text.lower() == "@alekami649 @aholaheew @pelmenvkusniy в чате активим")
-def handle_activim6654(message):
-    for _ in range(2):
-        bot.send_message(message.chat.id, "@pelmenvkusniy @aholaheew @alekami649 в чате активим")
-
-
-@bot.message_handler(
-    func=lambda message: message.text.lower() == "@alekami649 @pelmenvkusniy @aholaheew в чате активим")
-def handle_activim4(message):
-    for _ in range(2):
-        bot.send_message(message.chat.id, "@pelmenvkusniy @aholaheew @alekami649 в чате активим")
-
-
-@bot.message_handler(func=lambda message: message.text.lower() == "@alekami649")
-def handle_alekami(message):
-    for _ in range(5):
-        bot.send_message(message.chat.id, "@alekami649")
-
-
-@bot.message_handler(func=lambda message: message.text.lower() == "иди нахуй")
-def handle_alekami649(message):
-    bot.send_message(message.chat.id, "сам иди пидр безмамный")
-
-
-@bot.message_handler(func=lambda message: message.text.lower() == "ladno")
-def handle_ladnoenglish(message):
-    bot.send_message(message.chat.id, "ladno")
-
-
-@bot.message_handler(func=lambda message: message.text.lower() == "мать ебал")
-def handle_matebal(message):
-    username = message.from_user.first_name
-    bot.reply_to(message, f"{username} заебал со своим Мать ебал")
-
-
 sticker_ids = ['CAACAgIAAxkBAAEJdodklqms9fZWB4iEiWCBEfB7kAnDWgACTzcAAhOsmUh7hDyJcDuaHS8E',
                'CAACAgIAAxkBAAEJdo1klqx8h1L445FMWv9dVmgjDoY0jQAC4AADi_lSO_-_V_BtJoNuLwQ',
                'CAACAgIAAxkBAAEJdo9klqyftx3QpNX_dmp2hOQCJy7mKQAC6SoAAiQjEEgkU062E7Upky8E',
@@ -693,71 +607,6 @@ sticker_ids = ['CAACAgIAAxkBAAEJdodklqms9fZWB4iEiWCBEfB7kAnDWgACTzcAAhOsmUh7hDyJ
 def send_random_sticker(message):
     random_sticker_id = random.choice(sticker_ids)
     bot.send_sticker(message.chat.id, random_sticker_id)
-
-
-@bot.message_handler(func=lambda message: message.text.lower() == "пон")
-def handle_pon(message):
-    bot.reply_to(message, "НИХУЯ НЕ ПОНЯТНО БЛЯЯЯЯЯЯТЬ 🤨🤨🤨🤨")
-
-
-@bot.message_handler(func=lambda message: message.text.lower() == "понятно")
-def handle_ponyatno(message):
-    bot.reply_to(message, "НИХУЯ НЕ ПОНЯТНО БЛЯЯЯЯЯЯТЬ 🤨🤨🤨🤨")
-
-
-@bot.message_handler(func=lambda message: message.text.lower() == "допустим")
-def handle_dopustim(message):
-    bot.reply_to(message, "это матвей придумал")
-
-
-@bot.message_handler(func=lambda message: message.text.lower() == "ладно")
-def handle_ladno(message):
-    bot.send_message(message.chat.id, "ладно")
-
-
-@bot.message_handler(func=lambda message: message.text.lower() == "бывает")
-def handle_bivaet(message):
-    bot.send_message(message.chat.id, "у тебя в жопе хуй бывает")
-
-
-@bot.message_handler(func=lambda message: message.text.lower() == "гений")
-def handle_geni(message):
-    bot.send_message(message.chat.id, "да 😎😎😎")
-
-
-@bot.message_handler(func=lambda message: message.text.lower() == "нахуя?")
-def handle_naxuya(message):
-    bot.send_message(message.chat.id, "чтобы жизнь мёдом не казалась")
-
-
-@bot.message_handler(func=lambda message: message.text.lower() == "нахуя")
-def handle_naxyya(message):
-    bot.send_message(message.chat.id, "чтобы жизнь мёдом не казалась")
-
-
-@bot.message_handler(func=lambda message: message.text.lower() == "пинг кеши")
-def handle_keshaping(message):
-    bot.send_message(message.chat.id, "какой бизнес открыл @aholaheew? Малый")
-
-
-@bot.message_handler(func=lambda message: message.text.lower() == "полезно")
-def handle_polezno(message):
-    bot.reply_to(message, "нет нахуй не полезно")
-
-
-@bot.message_handler(func=lambda message: message.text.lower() == "ladno")
-def handle_ladnoenglish(message):
-    bot.send_message(message.chat.id, "ladno")
-
-
-@bot.message_handler(func=lambda message: message.text.lower() == "цитата")
-def handle_citata(message):
-    bot.reply_to(message, "безумна можна быть первым")
-
-
-@bot.message_handler(func=lambda message: message.text.lower() == "жиза")
-def handle_ziza_sogl(message):
-    bot.reply_to(message, "согл")
 
 
 @bot.message_handler(func=lambda message: message.text.lower() == "работаем?")
@@ -908,324 +757,6 @@ def send_random_jojo(message):
     random_gif = random.choice(gif_links_patrick)
 
     bot.send_document(message.chat.id, random_gif)
-
-
-photo_links_siski = [
-    "https://chohanpohan.com/uploads/posts/2021-12/1640966054_1-chohanpohan-com-p-porno-golie-siski-i-zhivotiki-devushek-1.jpg",
-    "https://fotosbor.com/files/2022/01/IMGJPEG16423045247VVgyF/1642304524bWqM3e.jpeg",
-    "https://chohanpohan.com/uploads/posts/2022-02/1643972324_1-chohanpohan-com-p-porno-golaya-grud-1go-razmera-1.jpg",
-    "https://erotic-home.com/uploads/posts/2019-04/1554070451_002.jpg",
-    "https://www.yaeby.pro/contents/videos_screenshots/18000/18905/642x361/1.jpg",
-    "https://ttelka.com/uploads/posts/2022-01/1641483472_2-ttelka-com-p-erotika-zhenskie-siski-doma-golie-2.jpg",
-    "https://chohanpohan.com/uploads/posts/2021-12/1638770384_1-chohanpohan-com-p-porno-bolshie-golie-siski-1.jpg",
-    "https://hot4all.ru/wp-content/uploads/2022/09/big-nipples-h4a-19-scaled.jpg",
-    "https://pornodomka.com/contents/videos_screenshots/1000/1335/preview.jpg",
-    "http://bufera.pro/wp-content/uploads/2021/05/images5526.jpg",
-    "http://bufera.pro/wp-content/uploads/2021/05/images5528.jpg",
-    "https://drochikula.com/uploads/posts/2022-12/1671139115_1-drochikula-com-p-porno-golie-siski-popki-doma-1.jpg",
-    "https://golye-zhenshiny.info/wp-content/uploads/2020/08/golye-titki-siski-devushek-01.jpg",
-    "https://www.pornozavod.cc/contents/videos_screenshots/7000/7328/468x282/1.jpg",
-    "https://ttelka.com/uploads/posts/2022-01/1641483430_17-ttelka-com-p-erotika-zhenskie-siski-doma-golie-17.jpg",
-    "https://photochki.pro/uploads/posts/2021-03/1615634476_37-p-golie-siski-bez-litsa-erotika-46.jpg",
-    "https://goloe.me/uploads/posts/2022-01/1642543102_2-goloe-me-p-erotika-skin-svoi-golie-siski-3.jpg",
-    "https://ttelka.com/uploads/posts/2022-01/1642771442_1-ttelka-com-p-erotika-golie-siski-dlya-feika-1.jpg",
-    "https://topdevka.com/uploads/posts/2022-08/thumbs/1659504799_14-topdevka-com-p-erotika-golie-siski-dlya-feika-18.jpg",
-    "https://siskins.club/uploads/posts/2021-12/thumbs/1639200222_38-siskins-club-p-golie-siski-v-plokhom-kachestve-erotika-41.jpg",
-    "https://tinypic.host/images/2023/06/16/photo_1_2023-06-16_16-17-07.jpeg",
-    "https://tinypic.host/images/2023/06/16/photo_2_2023-06-16_16-17-07.jpeg",
-    "https://tinypic.host/images/2023/06/16/photo_3_2023-06-16_16-17-07.jpeg",
-    "https://tinypic.host/images/2023/06/16/photo_4_2023-06-16_16-17-07.jpeg",
-    "https://tinypic.host/images/2023/06/16/photo_5_2023-06-16_16-17-07.jpeg",
-    "https://tinypic.host/images/2023/06/16/photo_6_2023-06-16_16-17-07.jpeg",
-    "https://tinypic.host/images/2023/06/16/photo_7_2023-06-16_16-17-07.jpeg",
-    "https://tinypic.host/images/2023/06/16/photo_8_2023-06-16_16-17-07.jpeg",
-    "https://tinypic.host/images/2023/06/16/photo_9_2023-06-16_16-17-07.jpeg",
-    "https://tinypic.host/images/2023/06/16/photo_10_2023-06-16_16-17-07.jpeg",
-    "https://tinypic.host/images/2023/06/16/photo_11_2023-06-16_16-17-07.jpeg",
-    "https://tinypic.host/images/2023/06/16/photo_12_2023-06-16_16-17-07.jpeg",
-    "https://tinypic.host/images/2023/06/16/photo_14_2023-06-16_16-17-07.jpeg",
-    "https://tinypic.host/images/2023/06/16/photo_15_2023-06-16_16-17-07.jpeg",
-    "https://tinypic.host/images/2023/06/16/photo_16_2023-06-16_16-17-07.jpeg",
-    "https://tinypic.host/images/2023/06/16/photo_17_2023-06-16_16-17-07.jpeg",
-    "https://tinypic.host/images/2023/06/16/images-4.jpeg",
-    "https://tinypic.host/images/2023/06/16/images-3.jpeg",
-    "https://tinypic.host/images/2023/06/16/images-2.jpeg",
-    "https://tinypic.host/images/2023/06/16/images-1.jpeg",
-    "https://tinypic.host/images/2023/06/16/imageY.jpeg",
-    "https://img.piski-siski.net/ph/img/11/115219261_th.jpg",
-    "https://ero-top.info/uploads/posts/2021-01/1610702571_3.jpg",
-    "https://goloe.me/uploads/posts/2022-01/1642543121_1-goloe-me-p-erotika-skin-svoi-golie-siski-2.jpg",
-    "https://erowall.com/wallpapers/original/15753.jpg",
-    "https://ttelka.com/uploads/posts/2022-02/1644273618_1-ttelka-com-p-erotika-klassnie-golie-siski-1.jpg",
-    "https://boombo.biz/uploads/posts/2022-05/1652591182_1-boombo-biz-p-siski-devushki-bez-litsa-krasivaya-erotika-1.jpg",
-    "https://photochki.pro/uploads/posts/2022-12/thumbs/1669844874_photochki-pro-p-sisi-bez-litsa-erotika-1.jpg",
-    "https://photochki.pro/uploads/posts/2022-12/thumbs/1669844911_photochki-pro-p-sisi-bez-litsa-erotika-8.jpg",
-    "https://photochki.pro/uploads/posts/2022-12/thumbs/1669844868_photochki-pro-p-sisi-bez-litsa-erotika-10.jpg",
-    "https://photochki.pro/uploads/posts/2022-12/thumbs/1669844881_photochki-pro-p-sisi-bez-litsa-erotika-11.jpg",
-    "https://photochki.pro/uploads/posts/2022-12/thumbs/1669844885_photochki-pro-p-sisi-bez-litsa-erotika-12.jpg",
-    "https://photochki.pro/uploads/posts/2022-12/thumbs/1669844904_photochki-pro-p-sisi-bez-litsa-erotika-14.jpg",
-    "https://photochki.pro/uploads/posts/2022-12/thumbs/1669844928_photochki-pro-p-sisi-bez-litsa-erotika-15.jpg",
-    "https://photochki.pro/uploads/posts/2022-12/thumbs/1669844862_photochki-pro-p-sisi-bez-litsa-erotika-20.jpg",
-    "https://boombo.biz/uploads/posts/2022-01/thumbs/1642254442_9-boombo-biz-p-golie-konusnie-siski-erotika-10.jpg",
-    "https://ttelka.com/uploads/posts/2022-01/1642771416_2-ttelka-com-p-erotika-golie-siski-dlya-feika-2.jpg",
-    "https://ttelka.com/uploads/posts/2022-01/thumbs/1642771474_8-ttelka-com-p-erotika-golie-siski-dlya-feika-8.jpg",
-    "https://ttelka.com/uploads/posts/2022-01/thumbs/1642771474_10-ttelka-com-p-erotika-golie-siski-dlya-feika-10.jpg",
-    "https://ttelka.com/uploads/posts/2022-01/thumbs/1642771467_16-ttelka-com-p-erotika-golie-siski-dlya-feika-16.jpg",
-    "https://ttelka.com/uploads/posts/2022-01/1642771493_24-ttelka-com-p-erotika-golie-siski-dlya-feika-29.jpg",
-    "https://ttelka.com/uploads/posts/2022-01/1642771509_27-ttelka-com-p-erotika-golie-siski-dlya-feika-32.jpg",
-    "https://ttelka.com/uploads/posts/2022-01/thumbs/1642771508_30-ttelka-com-p-erotika-golie-siski-dlya-feika-36.jpg",
-    "https://eropic.cc/uploads/posts/2022-09/thumbs/1664256534_4-eropic-cc-p-erotika-golikh-sisek-v-plokhom-kachestve-4.jpg",
-    "https://devkis.club/uploads/posts/2019-09/1568531422_russkie-siski-erotika-38.jpg",
-    "https://trahbabah.com/uploads/posts/2022-11/1669650393_1-trahbabah-com-p-porno-kospleishchitsi-s-golimi-siskami-1.jpg",
-    "https://hot4all.ru/wp-content/uploads/2021/05/boobs-DD-64-854x1024.jpg",
-    "https://chohanpohan.com/uploads/posts/2021-12/thumbs/1640647061_1-chohanpohan-com-p-porno-golie-siski-pyatogo-razmera-1.jpg",
-    "https://trahbabah.com/uploads/posts/2022-12/1670016780_4-trahbabah-com-p-porno-pishnie-devushki-laskayut-svoi-prele-4.jpg",
-    "https://i.etsystatic.com/37276884/r/il/dea317/4663888463/il_570xN.4663888463_eldf.jpg",
-    "https://static-ca-cdn.eporner.com/gallery/nU/sl/IRjjq4nslnU/9159744-fe4nsjvxeaa7vld_880x660.jpg",
-    "https://tinypic.host/images/2023/06/18/1449562182_ad6t6rd5hkq.jpeg",
-    "https://tinypic.host/images/2023/06/18/1449562187_d_kietp9qfo.jpeg",
-    "https://tinypic.host/images/2023/06/18/1460966513_phte9neszfq.jpeg",
-    "https://tinypic.host/images/2023/06/18/1460966542_jqa7bkm62i0.jpeg",
-    "https://tinypic.host/images/2023/06/18/1460966552_xg4ucyci7g0.jpeg",
-    "https://tinypic.host/images/2023/06/18/1460966556_qaln5usovou.jpeg",
-    "https://tinypic.host/images/2023/06/18/1460966560_uglksd1yfk8.jpeg",
-    "https://tinypic.host/images/2023/06/18/1639194773_20-chohanpohan-com-p-porno-selfi-siski-bez-litsa-20.jpeg",
-    "https://tinypic.host/images/2023/06/18/1639194777_21-chohanpohan-com-p-porno-selfi-siski-bez-litsa-21.jpeg",
-    "https://tinypic.host/images/2023/06/18/1639194785_49-chohanpohan-com-p-porno-selfi-siski-bez-litsa-53.jpeg",
-    "https://tinypic.host/images/2023/06/18/1639194791_64-chohanpohan-com-p-porno-selfi-siski-bez-litsa-70.jpeg",
-    "https://tinypic.host/images/2023/06/18/1639194804_16-chohanpohan-com-p-porno-selfi-siski-bez-litsa-16.jpeg",
-    "https://tinypic.host/images/2023/06/18/1639194807_59-chohanpohan-com-p-porno-selfi-siski-bez-litsa-63.jpeg",
-    "https://tinypic.host/images/2023/06/18/1639194808_17-chohanpohan-com-p-porno-selfi-siski-bez-litsa-17.jpeg",
-    "https://tinypic.host/images/2023/06/18/1639194810_13-chohanpohan-com-p-porno-selfi-siski-bez-litsa-13.jpeg",
-    "https://tinypic.host/images/2023/06/18/1639194815_51-chohanpohan-com-p-porno-selfi-siski-bez-litsa-55.jpeg",
-    "https://tinypic.host/images/2023/06/18/1639194816_36-chohanpohan-com-p-porno-selfi-siski-bez-litsa-39.jpeg",
-    "https://tinypic.host/images/2023/06/18/1639194818_68-chohanpohan-com-p-porno-selfi-siski-bez-litsa-75.jpeg",
-    "https://tinypic.host/images/2023/06/18/1639194819_39-chohanpohan-com-p-porno-selfi-siski-bez-litsa-42.jpeg",
-    "https://tinypic.host/images/2023/06/18/1639194825_65-chohanpohan-com-p-porno-selfi-siski-bez-litsa-71.jpeg",
-    "https://tinypic.host/images/2023/06/18/1639194828_8-chohanpohan-com-p-porno-selfi-siski-bez-litsa-8.jpeg",
-    "https://tinypic.host/images/2023/06/18/1639194829_67-chohanpohan-com-p-porno-selfi-siski-bez-litsa-74.jpeg",
-    "https://tinypic.host/images/2023/06/18/1639194838_1-chohanpohan-com-p-porno-selfi-siski-bez-litsa-1.jpeg",
-    "https://tinypic.host/images/2023/06/18/1639194839_6-chohanpohan-com-p-porno-selfi-siski-bez-litsa-6.jpeg",
-    "https://tinypic.host/images/2023/06/18/1639194840_43-chohanpohan-com-p-porno-selfi-siski-bez-litsa-46.jpeg",
-    "https://tinypic.host/images/2023/06/18/1639194845_10-chohanpohan-com-p-porno-selfi-siski-bez-litsa-10.jpeg",
-    "https://tinypic.host/images/2023/06/18/1639194845_53-chohanpohan-com-p-porno-selfi-siski-bez-litsa-57.jpeg",
-    "https://tinypic.host/images/2023/06/18/1639194851_3-chohanpohan-com-p-porno-selfi-siski-bez-litsa-3.jpeg",
-    "https://tinypic.host/images/2023/06/18/1639194851_5-chohanpohan-com-p-porno-selfi-siski-bez-litsa-5.jpeg",
-    "https://tinypic.host/images/2023/06/18/1639194851_37-chohanpohan-com-p-porno-selfi-siski-bez-litsa-40.jpeg",
-    "https://tinypic.host/images/2023/06/18/1639194851_62-chohanpohan-com-p-porno-selfi-siski-bez-litsa-67.jpeg",
-    "https://tinypic.host/images/2023/06/18/1639194861_55-chohanpohan-com-p-porno-selfi-siski-bez-litsa-59.jpeg",
-    "https://tinypic.host/images/2023/06/18/1639194863_40-chohanpohan-com-p-porno-selfi-siski-bez-litsa-43.jpeg",
-    "https://tinypic.host/images/2023/06/18/1639194865_18-chohanpohan-com-p-porno-selfi-siski-bez-litsa-18.jpeg",
-    "https://tinypic.host/images/2023/06/18/1639194875_34-chohanpohan-com-p-porno-selfi-siski-bez-litsa-37.jpeg",
-    "https://tinypic.host/images/2023/06/18/1639194886_72-chohanpohan-com-p-porno-selfi-siski-bez-litsa-79.jpeg",
-    "https://tinypic.host/images/2023/06/18/1663229914_3-xnxxphoto-org-p-porno-obichnie-golie-siski-3.jpeg",
-    "https://tinypic.host/images/2023/07/03/photo_1_2023-07-03_17-12-14.jpeg",
-    "https://tinypic.host/images/2023/07/03/photo_2_2023-07-03_17-12-14.jpeg",
-    "https://tinypic.host/images/2023/07/03/photo_3_2023-07-03_17-12-14.jpeg",
-    "https://tinypic.host/images/2023/07/03/photo_4_2023-07-03_17-12-14.jpeg",
-    "https://tinypic.host/images/2023/07/03/photo_5_2023-07-03_17-12-14.jpeg",
-    "https://tinypic.host/images/2023/07/03/photo_6_2023-07-03_17-12-14.jpeg",
-    "https://tinypic.host/images/2023/07/03/photo_7_2023-07-03_17-12-14.jpeg",
-    "https://tinypic.host/images/2023/07/03/photo_8_2023-07-03_17-12-14.jpeg",
-    "https://tinypic.host/images/2023/07/03/photo_9_2023-07-03_17-12-14.jpeg",
-    "https://tinypic.host/images/2023/07/03/photo_10_2023-07-03_17-12-14.jpeg",
-    "https://tinypic.host/images/2023/07/03/photo_11_2023-07-03_17-12-14.jpeg",
-    "https://tinypic.host/images/2023/07/03/photo_12_2023-07-03_17-12-14.jpeg",
-    "https://tinypic.host/images/2023/07/03/photo_13_2023-07-03_17-12-14.jpeg",
-    "https://tinypic.host/images/2023/07/03/photo_14_2023-07-03_17-12-14.jpeg",
-    "https://tinypic.host/images/2023/07/03/photo_15_2023-07-03_17-12-14.jpeg",
-    "https://tinypic.host/images/2023/07/03/photo_16_2023-07-03_17-12-14.jpeg",
-    "https://tinypic.host/images/2023/07/03/photo_17_2023-07-03_17-12-14.jpeg",
-    "https://tinypic.host/images/2023/07/03/photo_18_2023-07-03_17-12-14.jpeg",
-    "https://tinypic.host/images/2023/07/03/photo_19_2023-07-03_17-12-14.jpeg",
-    "https://tinypic.host/images/2023/07/03/photo_20_2023-07-03_17-12-14.jpeg",
-    "https://tinypic.host/images/2023/07/03/photo_21_2023-07-03_17-12-14.jpeg",
-    "https://tinypic.host/images/2023/07/03/photo_22_2023-07-03_17-12-14.jpeg",
-    "https://tinypic.host/images/2023/07/03/photo_23_2023-07-03_17-12-14.jpeg",
-    "https://tinypic.host/images/2023/07/03/photo_24_2023-07-03_17-12-14.jpeg",
-    "https://tinypic.host/images/2023/07/03/photo_25_2023-07-03_17-12-14.jpeg",
-    "https://tinypic.host/images/2023/07/03/photo_26_2023-07-03_17-12-14.jpeg",
-    "https://tinypic.host/images/2023/07/03/photo_27_2023-07-03_17-12-14.jpeg",
-    "https://tinypic.host/images/2023/07/03/photo_28_2023-07-03_17-12-14.jpeg",
-    "https://tinypic.host/images/2023/07/03/photo_29_2023-07-03_17-12-14.jpeg",
-    "https://tinypic.host/images/2023/07/03/photo_30_2023-07-03_17-12-14.jpeg"
-
-]
-
-previous_photo_siski = None
-
-
-@bot.message_handler(func=lambda message: message.text.lower() == 'сиськи')
-def send_random_photo(message):
-    random_index = random.randint(0, len(photo_links_siski) - 1)
-    random_photo = photo_links_siski[random_index]
-
-    sent_message = bot.send_photo(message.chat.id, random_photo)
-
-    time.sleep(10)
-
-    bot.delete_message(chat_id=sent_message.chat.id, message_id=sent_message.message_id)
-
-
-photo_links_porno = [
-    "https://stat.pornobolt.vip/kartinki-kategorij-pornobolt/incest.jpg",
-    "https://st.gigporno.com/img/2022/0/20220895.jpg",
-    "https://st.gigporno.com/img/2022/0/20220224.jpg",
-    "https://img.empstatic.com/q80w233/category_avatars/anal-porn.jpg",
-    "https://f0.xhdporno.me/images/34592/34592_screen.jpg",
-    "https://photochki.pro/uploads/posts/2022-06/1655732490_1-photochki-pro-p-realnoe-domashnee-porno-porno-1.jpg",
-    "https://eropic.cc/uploads/posts/2022-07/1658836276_1-eropic-cc-p-erotika-khudozhnitsa-s-negrom-porno-1.jpg",
-    "https://imgporn.net/images/thmb/analnii-seks.jpg",
-    "https://devahy.org/uploads/posts/2022-01/1642820419_1-devahy-org-p-porno-rakom-s-negrom-1.jpg",
-    "https://chohanpohan.com/uploads/posts/2022-01/1642256963_1-chohanpohan-com-p-porno-negr-trakhaet-pered-muzhem-porno-1.jpg",
-    "https://eropic.cc/uploads/posts/2022-07/1658836328_4-eropic-cc-p-erotika-khudozhnitsa-s-negrom-porno-4.jpg",
-    "https://ttelka.com/uploads/posts/2022-01/1642546101_1-ttelka-com-p-porno-s-negrami-mzhm-teen-1.jpg",
-    "https://www.yaeby.pro/contents/videos_screenshots/6000/6042/preview.mp4.jpg",
-    "https://siski.name/uploads/posts/2023-01/1673661325_3-siski-name-p-erotika-khanna-khova-porno-3.jpg",
-    "https://tukifporno.com/wp-content/uploads/2022/06/d181d0bcd0bed182d180d0b5d182d18c-d0bed0bdd0bbd0b0d0b9d0bd-d180d183d181d181d0bad0b8d0b5-xxx-porno.jpg",
-    "https://st.bittictic.com/contents/videos_screenshots/166000/166731/720x406/1.jpg",
-    "https://st.bittictic.com/contents/videos_screenshots/140000/140181/720x406/1.jpg",
-    "https://m2.dozrel.com/contents/videos_screenshots/114000/114302/642x361/1.jpg",
-    "https://st.daitictic.com/contents/videos_screenshots/4000/4099/preview.mp4.jpg",
-    "https://st.ebtictic.com/contents/videos_screenshots/0/261/preview_720p.mp4.jpg",
-    "https://st.ebtictic.com/contents/videos_screenshots/15000/15294/preview.mp4.jpg",
-    "https://trahkino.me/contents/videos_screenshots/3000/3744/preview.mp4.jpg",
-    "https://hamtictictic.com/contents/videos_screenshots/237000/237042/preview.jpg",
-    "https://pornokiril.com/contents/videos_screenshots/1000/1800/preview.mp4.jpg",
-    "https://peretrah.net/contents/videos_screenshots/1000/1903/320x180/1.jpg",
-    "https://rusoska.com/contents/videos_screenshots/41000/41739/642x361/1.jpg",
-    "https://www.yaeby.pro/contents/videos_screenshots/4000/4977/preview.mp4.jpg",
-    "https://kinosalo.live/contents/videos_screenshots/0/360/preview.mp4.jpg",
-    "https://st.bestictic.com/contents/videos_screenshots/86000/86891/previewmp4720_.mp4.jpg",
-    "https://img.5porno.net/archive/70/6/69500/1-360x240.jpg",
-    "https://m.checkporno.cc/contents/videos_screenshots/8000/8481/640x360/7.jpg",
-    "https://porno-erotic.name/uploads/jpgperotic/jpgperotic456346567/456346567.jpg",
-    "https://m.1top.mobi/uploads/posts/2023-03/dal-russkoy-sosedke-pomyt-sya-v-dushe-i-poluchil-v-znak.jpg",
-    "https://imggen.eporner.com/6882133/1920/1080/15.jpg"
-    "https://tinypic.host/images/2023/07/03/photo_1_2023-07-03_16-55-02.jpeg",
-    "https://tinypic.host/images/2023/07/03/photo_2_2023-07-03_16-55-02.jpeg",
-    "https://tinypic.host/images/2023/07/03/photo_4_2023-07-03_16-55-02.jpeg",
-    "https://tinypic.host/images/2023/07/03/photo_5_2023-07-03_16-55-02.jpeg",
-    "https://tinypic.host/images/2023/07/03/photo_6_2023-07-03_16-55-02.jpeg",
-    "https://tinypic.host/images/2023/07/03/photo_7_2023-07-03_16-55-02.jpeg",
-    "https://tinypic.host/images/2023/07/03/photo_8_2023-07-03_16-55-02.jpeg",
-    "https://tinypic.host/images/2023/07/03/photo_9_2023-07-03_16-55-02.jpeg",
-    "https://tinypic.host/images/2023/07/03/photo_10_2023-07-03_16-55-02.jpeg",
-    "https://tinypic.host/images/2023/07/03/photo_11_2023-07-03_16-55-02.jpeg",
-    "https://tinypic.host/images/2023/07/03/photo_12_2023-07-03_16-55-02.jpeg",
-    "https://tinypic.host/images/2023/07/03/photo_13_2023-07-03_16-55-02.jpeg",
-    "https://tinypic.host/images/2023/07/03/photo_14_2023-07-03_16-55-02.jpeg",
-    "https://tinypic.host/images/2023/07/03/photo_15_2023-07-03_16-55-02.jpeg",
-    "https://tinypic.host/images/2023/07/03/photo_16_2023-07-03_16-55-02.jpeg",
-    "https://tinypic.host/images/2023/07/03/photo_17_2023-07-03_16-55-02.jpeg",
-    "https://tinypic.host/images/2023/07/03/photo_18_2023-07-03_16-55-02.jpeg",
-    "https://tinypic.host/images/2023/07/03/photo_19_2023-07-03_16-55-02.jpeg",
-    "https://tinypic.host/images/2023/07/03/photo_20_2023-07-03_16-55-02.jpeg",
-    "https://tinypic.host/images/2023/07/03/photo_21_2023-07-03_16-55-02.jpeg",
-    "https://tinypic.host/images/2023/07/03/photo_22_2023-07-03_16-55-02.jpeg"
-]
-
-previous_photo_porno = None
-
-
-@bot.message_handler(func=lambda message: message.text.lower() == 'порно')
-def send_random_photo_porno(message):
-    global previous_photo_porno
-    random_index = random.randint(0, len(photo_links_porno) - 1)
-    random_photo = photo_links_porno[random_index]
-
-    while random_photo == previous_photo_porno:
-        random_index = random.randint(0, len(photo_links_porno) - 1)
-        random_photo = photo_links_porno[random_index]
-
-    previous_photo_porno = random_photo
-
-    sent_message = bot.send_photo(message.chat.id, random_photo)
-
-    time.sleep(10)
-
-    bot.delete_message(chat_id=sent_message.chat.id, message_id=sent_message.message_id)
-
-
-photo_links_pisk = [
-    "https://devkis.club/uploads/posts/2022-12/1671639694_2-devkis-club-p-erotika-samii-bolshoi-chlen-golii-2.jpg",
-    "https://eropic.cc/uploads/posts/2022-05/1653207161_1-eropic-cc-p-erotika-bolshoi-chlen-doma-3.jpg",
-    "https://boobliks.pro/uploads/posts/2022-08/thumbs/1661073783_1-boobliks-pro-p-bolshoi-chlen-s-lineikoi-chastnoe-porno-1.jpg",
-    "https://chohanpohan.com/uploads/posts/2021-12/1638625551_1-chohanpohan-com-p-porno-bolshoi-chernii-khui-1.jpg",
-    "https://ttelka.com/uploads/posts/2022-03/1648549473_1-ttelka-com-p-erotika-ogromnii-chernii-chlen-1.jpg",
-    "https://chohanpohan.com/uploads/posts/2022-04/1651059675_1-chohanpohan-com-p-porno-bolshoi-chernii-chlen-1.jpg",
-    "https://goloe.me/uploads/posts/2022-01/1642967433_6-goloe-me-p-erotika-samii-bolshoi-penis-negra-6.jpg",
-    "https://photochki.pro/uploads/posts/2021-10/1634770201_61-photochki-pro-p-gigantskii-chernii-chlen-v-porno-porno-63.jpg"
-
-]
-
-previous_photo_penis = None
-
-
-@bot.message_handler(func=lambda message: message.text.lower() == 'писька')
-def send_randompiska_photo(message):
-    global previous_photo_penis
-    random_index = random.randint(0, len(photo_links_pisk) - 1)
-    random_photo = photo_links_pisk[random_index]
-
-    while random_photo == previous_photo_penis:
-        random_index = random.randint(0, len(photo_links_pisk) - 1)
-        random_photo = photo_links_pisk[random_index]
-
-    previous_photo_penis = random_photo
-
-    sent_message = bot.send_photo(message.chat.id, random_photo)
-
-    time.sleep(10)
-
-    bot.delete_message(chat_id=sent_message.chat.id, message_id=sent_message.message_id)
-
-
-photo_links_shopa = [
-    "https://tinypic.host/images/2023/07/02/1643848753_24-ttelka-com-p-erotika-kak-viglyadit-golaya-zhopa-zhenshc-26.jpeg",
-    "https://tinypic.host/images/2023/07/02/1643848778_23-ttelka-com-p-erotika-kak-viglyadit-golaya-zhopa-zhenshc-25.jpeg",
-    "https://tinypic.host/images/2023/07/02/1643848715_20-ttelka-com-p-erotika-kak-viglyadit-golaya-zhopa-zhenshc-22.jpeg",
-    "https://tinypic.host/images/2023/07/02/1643848777_19-ttelka-com-p-erotika-kak-viglyadit-golaya-zhopa-zhenshc-21.jpeg",
-    "https://tinypic.host/images/2023/07/02/1643848735_15-ttelka-com-p-erotika-kak-viglyadit-golaya-zhopa-zhenshc-17.jpeg",
-    "https://tinypic.host/images/2023/07/02/1643848720_13-ttelka-com-p-erotika-kak-viglyadit-golaya-zhopa-zhenshc-15.jpeg",
-    "https://tinypic.host/images/2023/07/02/1643848723_12-ttelka-com-p-erotika-kak-viglyadit-golaya-zhopa-zhenshc-14.jpeg",
-    "https://tinypic.host/images/2023/07/02/1643848711_11-ttelka-com-p-erotika-kak-viglyadit-golaya-zhopa-zhenshc-13.jpeg",
-    "https://tinypic.host/images/2023/07/02/1643848758_6-ttelka-com-p-erotika-kak-viglyadit-golaya-zhopa-zhenshc-8.jpeg",
-    "https://tinypic.host/images/2023/07/02/1643848683_3-ttelka-com-p-erotika-kak-viglyadit-golaya-zhopa-zhenshc-3.jpeg",
-    "https://tinypic.host/images/2023/07/02/images-3.jpeg",
-    "https://tinypic.host/images/2023/07/02/images-2.jpeg",
-    "https://tinypic.host/images/2023/07/02/1641151730_1-boombo-biz-p-bolshie-golie-zhopi-rakam-erotika-1.jpeg",
-    "https://tinypic.host/images/2023/07/02/1640365378_1-siski-name-p-porno-zhopa-samie-krasivie-golie-bez-trusi-1.jpeg",
-    "https://tinypic.host/images/2023/07/02/blondinka-studentka-trahaetsya-v-uzkuyu-jopu-i-est-spermu.jpeg",
-    "https://tinypic.host/images/2023/07/02/1608322667_5-p-samie-krasivie-golie-zhopi-porno-9.jpeg",
-    "https://tinypic.host/images/2023/07/02/1668712581_1-devkis-club-p-erotika-golaya-bolshaya-babya-zhopa-2.jpeg",
-    "https://tinypic.host/images/2023/07/02/1661038344_1-telochki-org-p-golaya-zhopa-tyanki-erotika-1.jpeg",
-    "https://tinypic.host/images/2023/07/02/images-1.jpeg",
-    "https://tinypic.host/images/2023/07/02/images.jpeg",
-    "https://tinypic.host/images/2023/07/02/1664965321_1-eropic-cc-p-erotika-krutaya-golaya-zhopa-1.jpeg",
-    "https://tinypic.host/images/2023/07/02/1669832350_photochki-pro-p-golaya-popa-bez-trusov-erotika-instagram-1.jpeg"
-]
-
-previous_photo_shopa = None
-
-
-@bot.message_handler(func=lambda message: message.text.lower() == 'жопа')
-def send_randompiska_photo(message):
-    global previous_photo_shopa
-    random_index = random.randint(0, len(photo_links_shopa) - 1)
-    random_photo = photo_links_shopa[random_index]
-
-    while random_photo == previous_photo_shopa:
-        random_index = random.randint(0, len(photo_links_shopa) - 1)
-        random_photo = photo_links_shopa[random_index]
-
-    previous_photo_shopa = random_photo
-
-    sent_message = bot.send_photo(message.chat.id, random_photo)
-
-    time.sleep(10)
-
-    bot.delete_message(chat_id=sent_message.chat.id, message_id=sent_message.message_id)
 
 
 @bot.message_handler(func=lambda message: message.text.lower() == 'скинь песню')
@@ -1667,16 +1198,36 @@ def clear_rules(message):
         bot.send_message(message.chat.id, "Молодой человек идите нахуй у вас нет прав!")
 
 
+previous_image_url = ''
+
+
 @bot.message_handler(func=lambda message: True)
 def handle_message(message):
+    global previous_image_url
     chat_id = message.chat.id
+    remove_after = 10  # seconds
+
+    if message.text.lower() in images:
+        while True:
+            image_url = random.choice(images[message.text.lower()])
+            if image_url == previous_image_url:
+                continue
+            else:
+                previous_image_url = image_url
+                break
+        photo = bot.send_photo(message.chat.id, image_url)
+        time.sleep(remove_after)
+        bot.delete_message(photo.chat.id, photo.message_id)
+
+    if message.text.lower() in permanent_rules:
+        for rule in permanent_rules[message.text.lower()]:
+            bot.reply_to(message, rule.format('@' + message.from_user.username))
 
     if chat_id in rules:
         for rule in rules[chat_id]:
-            if rule['word'] in message.text.lower() and message.text.lower().count(rule['word']) == 1:
+            if rule['word'] == message.text.lower():
                 for _ in range(rule['count']):
                     bot.reply_to(message, rule['response'])
-                break
 
 
 @bot.message_handler(func=lambda message: True)
@@ -1691,12 +1242,12 @@ def send_current_time(message):
 
 
 def get_current_time(city):
-    return datetime.datetime.now().strftime('%H:%M:%S')
+    return datetime.now().strftime('%H:%M:%S')
 
 
 try:
     bot.remove_webhook()
-    bot.set_webhook(url='YOUR_WEBHOOK_URL/your-webhook-endpoint')
+    bot.set_webhook(url='YOUR_WEBHOOK_URL/process_update')
     app.run(host='0.0.0.0', port=8443, ssl_context=('CERT.pem', 'KEY.pem'))
 except Exception as e:
     print(f"Error in the webhook setup: {e}")
