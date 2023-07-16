@@ -273,7 +273,7 @@ def handle_ban_losha(message):
     bot.send_message(message.chat.id, "санёчек забанен ✅")
 
 
-@bot.message_handler(func=lambda message: any(word in message.text.lower() for word in ['http', 'https', '.com', '.ru', '.org', '.me', 'www', '.net', '.edu', '.gov', '.mil', '.int', '.ru', '.uk', '.de', '.cn', '.jp', '.br', '.au', '.ca']))
+@bot.message_handler(func=lambda message: any(entity.type == 'url' for entity in message.entities or []))
 def check_links(message):
     bot.reply_to(message, "Ни понял эта мы чё тут рекламу через ссылки пихаем?")
 
