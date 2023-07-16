@@ -38,7 +38,7 @@ geolocator = Nominatim(user_agent='your-user-agent')
 owm = OWM(API_TOKEN)
 
 
-@app.route('/your-webhook-endpoint', methods=['POST'])
+@app.route('/process_update', methods=['POST'])  # do not forget to update endpoint
 def webhook():
     update = telebot.types.Update.de_json(request.stream.read().decode("utf-8"))
     bot.process_new_updates([update])
